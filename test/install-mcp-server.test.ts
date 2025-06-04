@@ -30,6 +30,7 @@ describe("prepareMcpConfig", () => {
       owner: "test-owner",
       repo: "test-repo",
       branch: "test-branch",
+      allowedTools: [],
     });
 
     const parsed = JSON.parse(result);
@@ -107,6 +108,7 @@ describe("prepareMcpConfig", () => {
       repo: "test-repo",
       branch: "test-branch",
       additionalMcpConfig: "",
+      allowedTools: [],
     });
 
     const parsed = JSON.parse(result);
@@ -123,6 +125,7 @@ describe("prepareMcpConfig", () => {
       repo: "test-repo",
       branch: "test-branch",
       additionalMcpConfig: "   \n\t  ",
+      allowedTools: [],
     });
 
     const parsed = JSON.parse(result);
@@ -228,6 +231,7 @@ describe("prepareMcpConfig", () => {
       repo: "test-repo",
       branch: "test-branch",
       additionalMcpConfig: additionalConfig,
+      allowedTools: [],
     });
 
     const parsed = JSON.parse(result);
@@ -246,6 +250,7 @@ describe("prepareMcpConfig", () => {
       repo: "test-repo",
       branch: "test-branch",
       additionalMcpConfig: invalidJson,
+      allowedTools: [],
     });
 
     const parsed = JSON.parse(result);
@@ -265,6 +270,7 @@ describe("prepareMcpConfig", () => {
       repo: "test-repo",
       branch: "test-branch",
       additionalMcpConfig: nonObjectJson,
+      allowedTools: [],
     });
 
     const parsed = JSON.parse(result);
@@ -287,6 +293,7 @@ describe("prepareMcpConfig", () => {
       repo: "test-repo",
       branch: "test-branch",
       additionalMcpConfig: nullJson,
+      allowedTools: [],
     });
 
     const parsed = JSON.parse(result);
@@ -309,6 +316,7 @@ describe("prepareMcpConfig", () => {
       repo: "test-repo",
       branch: "test-branch",
       additionalMcpConfig: arrayJson,
+      allowedTools: [],
     });
 
     const parsed = JSON.parse(result);
@@ -354,6 +362,7 @@ describe("prepareMcpConfig", () => {
       repo: "test-repo",
       branch: "test-branch",
       additionalMcpConfig: additionalConfig,
+      allowedTools: [],
     });
 
     const parsed = JSON.parse(result);
@@ -374,6 +383,7 @@ describe("prepareMcpConfig", () => {
       owner: "test-owner",
       repo: "test-repo",
       branch: "test-branch",
+      allowedTools: [],
     });
 
     const parsed = JSON.parse(result);
@@ -393,6 +403,7 @@ describe("prepareMcpConfig", () => {
       owner: "test-owner",
       repo: "test-repo",
       branch: "test-branch",
+      allowedTools: [],
     });
 
     const parsed = JSON.parse(result);

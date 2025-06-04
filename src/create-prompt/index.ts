@@ -118,7 +118,9 @@ export function prepareContext(
     ...(triggerUsername && { triggerUsername }),
     ...(customInstructions && { customInstructions }),
     ...(allowedTools.length > 0 && { allowedTools: allowedTools.join(",") }),
-    ...(disallowedTools.length > 0 && { disallowedTools: disallowedTools.join(",") }),
+    ...(disallowedTools.length > 0 && {
+      disallowedTools: disallowedTools.join(","),
+    }),
     ...(directPrompt && { directPrompt }),
     ...(claudeBranch && { claudeBranch }),
   };
