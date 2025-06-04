@@ -24,7 +24,7 @@ describe("prepareMcpConfig", () => {
     processExitSpy.mockRestore();
   });
 
-  test("should return base config when no additional config is provided", async () => {
+  test("should return base config when no additional config is provided and no allowed_tools", async () => {
     const result = await prepareMcpConfig({
       githubToken: "test-token",
       owner: "test-owner",
@@ -34,11 +34,8 @@ describe("prepareMcpConfig", () => {
 
     const parsed = JSON.parse(result);
     expect(parsed.mcpServers).toBeDefined();
-    expect(parsed.mcpServers.github).toBeDefined();
+    expect(parsed.mcpServers.github).not.toBeDefined();
     expect(parsed.mcpServers.github_file_ops).toBeDefined();
-    expect(parsed.mcpServers.github.env.GITHUB_PERSONAL_ACCESS_TOKEN).toBe(
-      "test-token",
-    );
     expect(parsed.mcpServers.github_file_ops.env.GITHUB_TOKEN).toBe(
       "test-token",
     );
@@ -47,6 +44,56 @@ describe("prepareMcpConfig", () => {
     expect(parsed.mcpServers.github_file_ops.env.BRANCH_NAME).toBe(
       "test-branch",
     );
+  });
+
+  test("should include github MCP server when mcp__github__ tools are allowed", async () => {
+    const result = await prepareMcpConfig({
+      githubToken: "test-token",
+      owner: "test-owner",
+      repo: "test-repo",
+      branch: "test-branch",
+      allowedTools:
+        "mcp__github__create_issue,mcp__github_file_ops__commit_files",
+    });
+
+    const parsed = JSON.parse(result);
+    expect(parsed.mcpServers).toBeDefined();
+    expect(parsed.mcpServers.github).toBeDefined();
+    expect(parsed.mcpServers.github_file_ops).toBeDefined();
+    expect(parsed.mcpServers.github.env.GITHUB_PERSONAL_ACCESS_TOKEN).toBe(
+      "test-token",
+    );
+  });
+
+  test("should not include github MCP server when only file_ops tools are allowed", async () => {
+    const result = await prepareMcpConfig({
+      githubToken: "test-token",
+      owner: "test-owner",
+      repo: "test-repo",
+      branch: "test-branch",
+      allowedTools:
+        "mcp__github_file_ops__commit_files,mcp__github_file_ops__update_claude_comment",
+    });
+
+    const parsed = JSON.parse(result);
+    expect(parsed.mcpServers).toBeDefined();
+    expect(parsed.mcpServers.github).not.toBeDefined();
+    expect(parsed.mcpServers.github_file_ops).toBeDefined();
+  });
+
+  test("should not include any MCP servers when no GitHub tools are allowed", async () => {
+    const result = await prepareMcpConfig({
+      githubToken: "test-token",
+      owner: "test-owner",
+      repo: "test-repo",
+      branch: "test-branch",
+      allowedTools: "Edit,Read,Write",
+    });
+
+    const parsed = JSON.parse(result);
+    expect(parsed.mcpServers).toBeDefined();
+    expect(parsed.mcpServers.github).not.toBeDefined();
+    expect(parsed.mcpServers.github_file_ops).not.toBeDefined();
   });
 
   test("should return base config when additional config is empty string", async () => {
@@ -60,7 +107,7 @@ describe("prepareMcpConfig", () => {
 
     const parsed = JSON.parse(result);
     expect(parsed.mcpServers).toBeDefined();
-    expect(parsed.mcpServers.github).toBeDefined();
+    expect(parsed.mcpServers.github).not.toBeDefined();
     expect(parsed.mcpServers.github_file_ops).toBeDefined();
     expect(consoleWarningSpy).not.toHaveBeenCalled();
   });
@@ -76,7 +123,7 @@ describe("prepareMcpConfig", () => {
 
     const parsed = JSON.parse(result);
     expect(parsed.mcpServers).toBeDefined();
-    expect(parsed.mcpServers.github).toBeDefined();
+    expect(parsed.mcpServers.github).not.toBeDefined();
     expect(parsed.mcpServers.github_file_ops).toBeDefined();
     expect(consoleWarningSpy).not.toHaveBeenCalled();
   });
@@ -100,6 +147,8 @@ describe("prepareMcpConfig", () => {
       repo: "test-repo",
       branch: "test-branch",
       additionalMcpConfig: additionalConfig,
+      allowedTools:
+        "mcp__github__create_issue,mcp__github_file_ops__commit_files",
     });
 
     const parsed = JSON.parse(result);
@@ -133,6 +182,8 @@ describe("prepareMcpConfig", () => {
       repo: "test-repo",
       branch: "test-branch",
       additionalMcpConfig: additionalConfig,
+      allowedTools:
+        "mcp__github__create_issue,mcp__github_file_ops__commit_files",
     });
 
     const parsed = JSON.parse(result);
@@ -174,7 +225,7 @@ describe("prepareMcpConfig", () => {
     const parsed = JSON.parse(result);
     expect(parsed.customProperty).toBe("custom-value");
     expect(parsed.anotherProperty).toEqual({ nested: "value" });
-    expect(parsed.mcpServers.github).toBeDefined();
+    expect(parsed.mcpServers.github).not.toBeDefined();
     expect(parsed.mcpServers.custom_server).toBeDefined();
   });
 
@@ -193,7 +244,7 @@ describe("prepareMcpConfig", () => {
     expect(consoleWarningSpy).toHaveBeenCalledWith(
       expect.stringContaining("Failed to parse additional MCP config:"),
     );
-    expect(parsed.mcpServers.github).toBeDefined();
+    expect(parsed.mcpServers.github).not.toBeDefined();
     expect(parsed.mcpServers.github_file_ops).toBeDefined();
   });
 
@@ -215,7 +266,7 @@ describe("prepareMcpConfig", () => {
     expect(consoleWarningSpy).toHaveBeenCalledWith(
       expect.stringContaining("MCP config must be a valid JSON object"),
     );
-    expect(parsed.mcpServers.github).toBeDefined();
+    expect(parsed.mcpServers.github).not.toBeDefined();
     expect(parsed.mcpServers.github_file_ops).toBeDefined();
   });
 
@@ -237,7 +288,7 @@ describe("prepareMcpConfig", () => {
     expect(consoleWarningSpy).toHaveBeenCalledWith(
       expect.stringContaining("MCP config must be a valid JSON object"),
     );
-    expect(parsed.mcpServers.github).toBeDefined();
+    expect(parsed.mcpServers.github).not.toBeDefined();
     expect(parsed.mcpServers.github_file_ops).toBeDefined();
   });
 
@@ -258,7 +309,7 @@ describe("prepareMcpConfig", () => {
     expect(consoleInfoSpy).toHaveBeenCalledWith(
       "Merging additional MCP server configuration with built-in servers",
     );
-    expect(parsed.mcpServers.github).toBeDefined();
+    expect(parsed.mcpServers.github).not.toBeDefined();
     expect(parsed.mcpServers.github_file_ops).toBeDefined();
     // The array will be spread into the config (0: 1, 1: 2, 2: 3)
     expect(parsed[0]).toBe(1);
@@ -300,7 +351,7 @@ describe("prepareMcpConfig", () => {
     const parsed = JSON.parse(result);
     expect(parsed.mcpServers.server1).toBeDefined();
     expect(parsed.mcpServers.server2).toBeDefined();
-    expect(parsed.mcpServers.github).toBeDefined();
+    expect(parsed.mcpServers.github).not.toBeDefined();
     expect(parsed.mcpServers.github_file_ops.command).toBe("overridden");
     expect(parsed.mcpServers.github_file_ops.env.CUSTOM).toBe("value");
     expect(parsed.otherConfig.nested.deeply).toBe("value");

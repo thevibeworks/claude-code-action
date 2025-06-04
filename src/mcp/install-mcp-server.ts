@@ -7,6 +7,7 @@ type PrepareConfigParams = {
   branch: string;
   additionalMcpConfig?: string;
   claudeCommentId?: string;
+  allowedTools?: string;
 };
 
 export async function prepareMcpConfig(
@@ -19,42 +20,68 @@ export async function prepareMcpConfig(
     branch,
     additionalMcpConfig,
     claudeCommentId,
+    allowedTools,
   } = params;
   try {
+    // Parse allowed tools into an array
+    const allowedToolsList = allowedTools
+      ? allowedTools.split(",").map((tool) => tool.trim())
+      : [];
+
+    // Check if any GitHub MCP tools are allowed
+    const hasGitHubMcpTools = allowedToolsList.some((tool) =>
+      tool.startsWith("mcp__github__"),
+    );
+    const hasGitHubFileOpsTools = allowedToolsList.some((tool) =>
+      tool.startsWith("mcp__github_file_ops__"),
+    );
+
+    // Start with an empty servers object
+    const mcpServers: Record<string, any> = {};
+
+    // Only include github MCP server if GitHub tools are allowed
+    if (hasGitHubMcpTools) {
+      mcpServers.github = {
+        command: "docker",
+        args: [
+          "run",
+          "-i",
+          "--rm",
+          "-e",
+          "GITHUB_PERSONAL_ACCESS_TOKEN",
+          "ghcr.io/github/github-mcp-server:sha-e9f748f", // https://github.com/github/github-mcp-server/releases/tag/v0.4.0
+        ],
+        env: {
+          GITHUB_PERSONAL_ACCESS_TOKEN: githubToken,
+        },
+      };
+    }
+
+    // Always include github_file_ops server as it contains essential tools
+    // (mcp__github_file_ops__commit_files, mcp__github_file_ops__update_claude_comment)
+    // These are in the BASE_ALLOWED_TOOLS
+    if (hasGitHubFileOpsTools || !allowedTools) {
+      mcpServers.github_file_ops = {
+        command: "bun",
+        args: [
+          "run",
+          `${process.env.GITHUB_ACTION_PATH}/src/mcp/github-file-ops-server.ts`,
+        ],
+        env: {
+          GITHUB_TOKEN: githubToken,
+          REPO_OWNER: owner,
+          REPO_NAME: repo,
+          BRANCH_NAME: branch,
+          REPO_DIR: process.env.GITHUB_WORKSPACE || process.cwd(),
+          ...(claudeCommentId && { CLAUDE_COMMENT_ID: claudeCommentId }),
+          GITHUB_EVENT_NAME: process.env.GITHUB_EVENT_NAME || "",
+          IS_PR: process.env.IS_PR || "false",
+        },
+      };
+    }
+
     const baseMcpConfig = {
-      mcpServers: {
-        github: {
-          command: "docker",
-          args: [
-            "run",
-            "-i",
-            "--rm",
-            "-e",
-            "GITHUB_PERSONAL_ACCESS_TOKEN",
-            "ghcr.io/github/github-mcp-server:sha-e9f748f", // https://github.com/github/github-mcp-server/releases/tag/v0.4.0
-          ],
-          env: {
-            GITHUB_PERSONAL_ACCESS_TOKEN: githubToken,
-          },
-        },
-        github_file_ops: {
-          command: "bun",
-          args: [
-            "run",
-            `${process.env.GITHUB_ACTION_PATH}/src/mcp/github-file-ops-server.ts`,
-          ],
-          env: {
-            GITHUB_TOKEN: githubToken,
-            REPO_OWNER: owner,
-            REPO_NAME: repo,
-            BRANCH_NAME: branch,
-            REPO_DIR: process.env.GITHUB_WORKSPACE || process.cwd(),
-            ...(claudeCommentId && { CLAUDE_COMMENT_ID: claudeCommentId }),
-            GITHUB_EVENT_NAME: process.env.GITHUB_EVENT_NAME || "",
-            IS_PR: process.env.IS_PR || "false",
-          },
-        },
-      },
+      mcpServers,
     };
 
     // Merge with additional MCP config if provided
