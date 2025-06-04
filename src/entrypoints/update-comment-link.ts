@@ -156,7 +156,14 @@ async function run() {
       actionFailed = true;
       errorDetails = prepareError;
     } else {
-      // Check for existence of output file and parse it if available
+      // Check if the Claude action failed
+      // CLAUDE_SUCCESS is set to the result of: steps.claude-code.outputs.conclusion == 'success'
+      // If the step didn't run or didn't set outputs.conclusion, CLAUDE_SUCCESS will be "false"
+      // If the step succeeded, CLAUDE_SUCCESS will be "true"
+      const claudeSuccess = process.env.CLAUDE_SUCCESS === "true";
+      actionFailed = !claudeSuccess;
+
+      // Try to read execution details from output file
       try {
         const outputFile = process.env.OUTPUT_FILE;
         if (outputFile) {
@@ -179,14 +186,10 @@ async function run() {
             }
           }
         }
-
-        // Check if the Claude action failed
-        const claudeSuccess = process.env.CLAUDE_SUCCESS !== "false";
-        actionFailed = !claudeSuccess;
       } catch (error) {
         console.error("Error reading output file:", error);
-        // If we can't read the file, check for any failure markers
-        actionFailed = process.env.CLAUDE_SUCCESS === "false";
+        // Error reading output file doesn't change the action status
+        // We already determined actionFailed based on CLAUDE_SUCCESS
       }
     }
 
