@@ -146,7 +146,11 @@ async function run() {
       duration_api_ms?: number;
     } | null = null;
     let actionFailed = false;
+    let actionCancelled = false;
     let errorDetails: string | undefined;
+
+    // Check if the workflow was cancelled
+    const isCancelled = process.env.CLAUDE_CANCELLED === "true";
 
     // First check if prepare step failed
     const prepareSuccess = process.env.PREPARE_SUCCESS !== "false";
@@ -155,6 +159,9 @@ async function run() {
     if (!prepareSuccess && prepareError) {
       actionFailed = true;
       errorDetails = prepareError;
+    } else if (isCancelled) {
+      // If the workflow was cancelled, set the cancelled flag
+      actionCancelled = true;
     } else {
       // Check if the Claude action failed
       // CLAUDE_SUCCESS is set to the result of: steps.claude-code.outputs.conclusion == 'success'
@@ -197,6 +204,7 @@ async function run() {
     const commentInput: CommentUpdateInput = {
       currentBody,
       actionFailed,
+      actionCancelled,
       executionDetails,
       jobUrl,
       branchLink,

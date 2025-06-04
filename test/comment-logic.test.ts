@@ -418,4 +418,48 @@ describe("updateCommentBody", () => {
       );
     });
   });
+
+  describe("cancellation handling", () => {
+    it("shows cancellation message when actionCancelled is true", () => {
+      const input = {
+        ...baseInput,
+        currentBody: "Claude Code is working…",
+        actionCancelled: true,
+        executionDetails: { duration_ms: 30000 }, // 30s
+        triggerUsername: "test-user",
+      };
+
+      const result = updateCommentBody(input);
+      expect(result).toContain("**Claude's task was cancelled after 30s**");
+      expect(result).not.toContain("Claude encountered an error");
+      expect(result).not.toContain("Claude finished");
+    });
+
+    it("shows cancellation message without duration when duration is missing", () => {
+      const input = {
+        ...baseInput,
+        currentBody: "Claude Code is working…",
+        actionCancelled: true,
+        triggerUsername: "test-user",
+      };
+
+      const result = updateCommentBody(input);
+      expect(result).toContain("**Claude's task was cancelled**");
+      expect(result).not.toContain("after");
+    });
+
+    it("prioritizes cancellation over failure", () => {
+      const input = {
+        ...baseInput,
+        currentBody: "Claude Code is working…",
+        actionCancelled: true,
+        actionFailed: true, // Both are true, cancellation should take precedence
+        executionDetails: { duration_ms: 45000 },
+      };
+
+      const result = updateCommentBody(input);
+      expect(result).toContain("**Claude's task was cancelled after 45s**");
+      expect(result).not.toContain("Claude encountered an error");
+    });
+  });
 });

@@ -9,6 +9,7 @@ export type ExecutionDetails = {
 export type CommentUpdateInput = {
   currentBody: string;
   actionFailed: boolean;
+  actionCancelled?: boolean;
   executionDetails: ExecutionDetails | null;
   jobUrl: string;
   branchLink?: string;
@@ -74,6 +75,7 @@ export function updateCommentBody(input: CommentUpdateInput): string {
     branchLink,
     prLink,
     actionFailed,
+    actionCancelled,
     branchName,
     triggerUsername,
     errorDetails,
@@ -112,7 +114,13 @@ export function updateCommentBody(input: CommentUpdateInput): string {
   // Build the header
   let header = "";
 
-  if (actionFailed) {
+  if (actionCancelled) {
+    header = "**Claude's task was cancelled";
+    if (durationStr) {
+      header += ` after ${durationStr}`;
+    }
+    header += "**";
+  } else if (actionFailed) {
     header = "**Claude encountered an error";
     if (durationStr) {
       header += ` after ${durationStr}`;
