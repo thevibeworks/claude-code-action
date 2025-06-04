@@ -7,7 +7,7 @@ type PrepareConfigParams = {
   branch: string;
   additionalMcpConfig?: string;
   claudeCommentId?: string;
-  allowedTools?: string;
+  allowedTools: string[];
 };
 
 export async function prepareMcpConfig(
@@ -23,22 +23,36 @@ export async function prepareMcpConfig(
     allowedTools,
   } = params;
   try {
-    // Parse allowed tools into an array
-    const allowedToolsList = allowedTools
-      ? allowedTools.split(",").map((tool) => tool.trim())
-      : [];
+    const allowedToolsList = allowedTools || [];
 
-    // Check if any GitHub MCP tools are allowed
     const hasGitHubMcpTools = allowedToolsList.some((tool) =>
       tool.startsWith("mcp__github__"),
     );
 
-    // Start with an empty servers object
-    const mcpServers: Record<string, any> = {};
+    const baseMcpConfig: { mcpServers: Record<string, unknown> } = {
+      mcpServers: {
+        github_file_ops: {
+          command: "bun",
+          args: [
+            "run",
+            `${process.env.GITHUB_ACTION_PATH}/src/mcp/github-file-ops-server.ts`,
+          ],
+          env: {
+            GITHUB_TOKEN: githubToken,
+            REPO_OWNER: owner,
+            REPO_NAME: repo,
+            BRANCH_NAME: branch,
+            REPO_DIR: process.env.GITHUB_WORKSPACE || process.cwd(),
+            ...(claudeCommentId && { CLAUDE_COMMENT_ID: claudeCommentId }),
+            GITHUB_EVENT_NAME: process.env.GITHUB_EVENT_NAME || "",
+            IS_PR: process.env.IS_PR || "false",
+          },
+        },
+      },
+    };
 
-    // Only include github MCP server if GitHub tools are allowed
     if (hasGitHubMcpTools) {
-      mcpServers.github = {
+      baseMcpConfig.mcpServers.github = {
         command: "docker",
         args: [
           "run",
@@ -53,31 +67,6 @@ export async function prepareMcpConfig(
         },
       };
     }
-
-    // Always include github_file_ops server as it contains essential tools
-    // (mcp__github_file_ops__commit_files, mcp__github_file_ops__update_claude_comment)
-    // These are in the BASE_ALLOWED_TOOLS and should always be available
-    mcpServers.github_file_ops = {
-      command: "bun",
-      args: [
-        "run",
-        `${process.env.GITHUB_ACTION_PATH}/src/mcp/github-file-ops-server.ts`,
-      ],
-      env: {
-        GITHUB_TOKEN: githubToken,
-        REPO_OWNER: owner,
-        REPO_NAME: repo,
-        BRANCH_NAME: branch,
-        REPO_DIR: process.env.GITHUB_WORKSPACE || process.cwd(),
-        ...(claudeCommentId && { CLAUDE_COMMENT_ID: claudeCommentId }),
-        GITHUB_EVENT_NAME: process.env.GITHUB_EVENT_NAME || "",
-        IS_PR: process.env.IS_PR || "false",
-      },
-    };
-
-    const baseMcpConfig = {
-      mcpServers,
-    };
 
     // Merge with additional MCP config if provided
     if (additionalMcpConfig && additionalMcpConfig.trim()) {

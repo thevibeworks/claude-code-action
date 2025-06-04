@@ -52,8 +52,10 @@ describe("prepareMcpConfig", () => {
       owner: "test-owner",
       repo: "test-repo",
       branch: "test-branch",
-      allowedTools:
-        "mcp__github__create_issue,mcp__github_file_ops__commit_files",
+      allowedTools: [
+        "mcp__github__create_issue",
+        "mcp__github_file_ops__commit_files",
+      ],
     });
 
     const parsed = JSON.parse(result);
@@ -71,8 +73,10 @@ describe("prepareMcpConfig", () => {
       owner: "test-owner",
       repo: "test-repo",
       branch: "test-branch",
-      allowedTools:
-        "mcp__github_file_ops__commit_files,mcp__github_file_ops__update_claude_comment",
+      allowedTools: [
+        "mcp__github_file_ops__commit_files",
+        "mcp__github_file_ops__update_claude_comment",
+      ],
     });
 
     const parsed = JSON.parse(result);
@@ -87,7 +91,7 @@ describe("prepareMcpConfig", () => {
       owner: "test-owner",
       repo: "test-repo",
       branch: "test-branch",
-      allowedTools: "Edit,Read,Write",
+      allowedTools: ["Edit", "Read", "Write"],
     });
 
     const parsed = JSON.parse(result);
@@ -147,8 +151,10 @@ describe("prepareMcpConfig", () => {
       repo: "test-repo",
       branch: "test-branch",
       additionalMcpConfig: additionalConfig,
-      allowedTools:
-        "mcp__github__create_issue,mcp__github_file_ops__commit_files",
+      allowedTools: [
+        "mcp__github__create_issue",
+        "mcp__github_file_ops__commit_files",
+      ],
     });
 
     const parsed = JSON.parse(result);
@@ -182,8 +188,10 @@ describe("prepareMcpConfig", () => {
       repo: "test-repo",
       branch: "test-branch",
       additionalMcpConfig: additionalConfig,
-      allowedTools:
-        "mcp__github__create_issue,mcp__github_file_ops__commit_files",
+      allowedTools: [
+        "mcp__github__create_issue",
+        "mcp__github_file_ops__commit_files",
+      ],
     });
 
     const parsed = JSON.parse(result);
