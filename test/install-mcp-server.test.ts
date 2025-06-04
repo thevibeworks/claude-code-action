@@ -81,7 +81,7 @@ describe("prepareMcpConfig", () => {
     expect(parsed.mcpServers.github_file_ops).toBeDefined();
   });
 
-  test("should not include any MCP servers when no GitHub tools are allowed", async () => {
+  test("should include file_ops server even when no GitHub tools are allowed", async () => {
     const result = await prepareMcpConfig({
       githubToken: "test-token",
       owner: "test-owner",
@@ -93,7 +93,7 @@ describe("prepareMcpConfig", () => {
     const parsed = JSON.parse(result);
     expect(parsed.mcpServers).toBeDefined();
     expect(parsed.mcpServers.github).not.toBeDefined();
-    expect(parsed.mcpServers.github_file_ops).not.toBeDefined();
+    expect(parsed.mcpServers.github_file_ops).toBeDefined();
   });
 
   test("should return base config when additional config is empty string", async () => {

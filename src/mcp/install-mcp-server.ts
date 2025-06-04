@@ -32,9 +32,6 @@ export async function prepareMcpConfig(
     const hasGitHubMcpTools = allowedToolsList.some((tool) =>
       tool.startsWith("mcp__github__"),
     );
-    const hasGitHubFileOpsTools = allowedToolsList.some((tool) =>
-      tool.startsWith("mcp__github_file_ops__"),
-    );
 
     // Start with an empty servers object
     const mcpServers: Record<string, any> = {};
@@ -59,26 +56,24 @@ export async function prepareMcpConfig(
 
     // Always include github_file_ops server as it contains essential tools
     // (mcp__github_file_ops__commit_files, mcp__github_file_ops__update_claude_comment)
-    // These are in the BASE_ALLOWED_TOOLS
-    if (hasGitHubFileOpsTools || !allowedTools) {
-      mcpServers.github_file_ops = {
-        command: "bun",
-        args: [
-          "run",
-          `${process.env.GITHUB_ACTION_PATH}/src/mcp/github-file-ops-server.ts`,
-        ],
-        env: {
-          GITHUB_TOKEN: githubToken,
-          REPO_OWNER: owner,
-          REPO_NAME: repo,
-          BRANCH_NAME: branch,
-          REPO_DIR: process.env.GITHUB_WORKSPACE || process.cwd(),
-          ...(claudeCommentId && { CLAUDE_COMMENT_ID: claudeCommentId }),
-          GITHUB_EVENT_NAME: process.env.GITHUB_EVENT_NAME || "",
-          IS_PR: process.env.IS_PR || "false",
-        },
-      };
-    }
+    // These are in the BASE_ALLOWED_TOOLS and should always be available
+    mcpServers.github_file_ops = {
+      command: "bun",
+      args: [
+        "run",
+        `${process.env.GITHUB_ACTION_PATH}/src/mcp/github-file-ops-server.ts`,
+      ],
+      env: {
+        GITHUB_TOKEN: githubToken,
+        REPO_OWNER: owner,
+        REPO_NAME: repo,
+        BRANCH_NAME: branch,
+        REPO_DIR: process.env.GITHUB_WORKSPACE || process.cwd(),
+        ...(claudeCommentId && { CLAUDE_COMMENT_ID: claudeCommentId }),
+        GITHUB_EVENT_NAME: process.env.GITHUB_EVENT_NAME || "",
+        IS_PR: process.env.IS_PR || "false",
+      },
+    };
 
     const baseMcpConfig = {
       mcpServers,
