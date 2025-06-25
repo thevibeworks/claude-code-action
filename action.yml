@@ -101,6 +101,7 @@ runs:
         bun run ${GITHUB_ACTION_PATH}/src/entrypoints/prepare.ts
       env:
         TRIGGER_PHRASE: ${{ inputs.trigger_phrase }}
+        LABEL_TRIGGER: ${{ inputs.label_trigger }}
         ASSIGNEE_TRIGGER: ${{ inputs.assignee_trigger }}
         BASE_BRANCH: ${{ inputs.base_branch }}
         ALLOWED_TOOLS: ${{ inputs.allowed_tools }}
