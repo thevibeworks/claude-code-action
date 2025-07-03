@@ -17,7 +17,26 @@ export async function checkWritePermissions(
   try {
     core.info(`Checking permissions for actor: ${actor}`);
 
-    // Check permissions directly using the permission endpoint
+    // For GitHub Apps (like claude-yolo[bot]), check if we can perform write operations
+    if (actor.endsWith("[bot]")) {
+      core.info(`GitHub App detected: ${actor}, checking app installation`);
+
+      try {
+        // Try to get the repository to verify the app has access
+        await octokit.repos.get({
+          owner: repository.owner,
+          repo: repository.repo,
+        });
+
+        core.info(`App has repository access: ${actor}`);
+        return true;
+      } catch (error) {
+        core.warning(`App lacks repository access: ${error}`);
+        return false;
+      }
+    }
+
+    // For human users, check permissions using the collaborator endpoint
     const response = await octokit.repos.getCollaboratorPermissionLevel({
       owner: repository.owner,
       repo: repository.repo,
