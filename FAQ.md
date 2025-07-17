@@ -8,7 +8,7 @@ This FAQ addresses common questions and gotchas when using the Claude Code GitHu
 
 By default, GitHub Apps and bots cannot trigger Claude for security reasons. You have two options:
 
-1. **Enable bot actors** (recommended): Add `allow_bot_actor: true` to your Claude workflow configuration
+1. **Enable bot actors** (recommended): Add `allow_bot_actor: true` to your Claude workflow configuration. **Important**: The bot must also have write permissions to the repository.
 2. **Use PAT workaround**: Use a Personal Access Token instead of `GITHUB_TOKEN` when posting comments from workflows
 
 The first option is cleaner and enables legitimate automation scenarios while maintaining security through explicit opt-in.
