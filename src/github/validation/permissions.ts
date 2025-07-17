@@ -3,102 +3,76 @@ import type { ParsedGitHubContext } from "../context";
 import type { Octokit } from "@octokit/rest";
 
 /**
- * Check if the actor has write permissions to the repository
- * @param octokit - The Octokit REST client
- * @param context - The GitHub context
- * @returns true if the actor has write permissions, false otherwise
+ * Return the GitHub user type (User, Bot, Organization, ...)
  */
-async function getBotActorType(
-  octokit: Octokit,
-  actor: string,
-): Promise<string | null> {
+async function getActorType(octokit: Octokit, actor: string): Promise<string | null> {
   try {
-    const { data: userData } = await octokit.users.getByUsername({
-      username: actor,
-    });
-    return userData.type;
+    const { data } = await octokit.users.getByUsername({ username: actor });
+    return data.type;
   } catch (error) {
     core.warning(`Failed to get user data for ${actor}: ${error}`);
     return null;
   }
 }
 
+/**
+ * Determine whether the supplied token grants **write‑level** access to the target repository.
+ *
+ * Why we don't call `GET /repos/{owner}/{repo}/installation}` anymore
+ * ------------------------------------------------------------------
+ * That endpoint *requires* a **JWT** (or the *app* token) and will 401 when we call it
+ * with an *installation* access token.  Using the simpler `GET /repos/{owner}/{repo}`
+ * lets us inspect the `permissions` object of the authenticated principal (human,
+ * PAT, or installation) without a second token.
+ */
 export async function checkWritePermissions(
   octokit: Octokit,
   context: ParsedGitHubContext,
 ): Promise<boolean> {
   const { repository, actor } = context;
 
-  try {
-    core.info(`Checking permissions for actor: ${actor}`);
+  core.info(`Checking write permissions for actor: ${actor}`);
 
-    const actorType = await getBotActorType(octokit, actor);
+  // 1. If the token owner is a human user, rely on the collaborator permission level.
+  const actorType = await getActorType(octokit, actor);
+  if (actorType !== "Bot") {
+    try {
+      const { data } = await octokit.repos.getCollaboratorPermissionLevel({
+        owner: repository.owner,
+        repo: repository.repo,
+        username: actor,
+      });
 
-    if (actorType === "Bot") {
-      core.info(`GitHub App detected: ${actor}, checking write permissions`);
-
-      let hasCollaboratorAccess = false;
-      try {
-        const response = await octokit.repos.getCollaboratorPermissionLevel({
-          owner: repository.owner,
-          repo: repository.repo,
-          username: actor,
-        });
-
-        const permissionLevel = response.data.permission;
-        core.info(`App collaborator permission level: ${permissionLevel}`);
-
-        hasCollaboratorAccess = permissionLevel === "admin" || permissionLevel === "write";
-        if (hasCollaboratorAccess) {
-          core.info(`App has write access via collaborator: ${permissionLevel}`);
-          return true;
-        }
-      } catch (error) {
-        core.warning(`Could not check collaborator permissions for bot: ${error}`);
-      }
-
-      try {
-        const installation = await octokit.apps.getRepoInstallation({
-          owner: repository.owner,
-          repo: repository.repo,
-        });
-
-        core.info(`App installation found: ${installation.data.id}`);
-
-        const permissions = installation.data.permissions;
-        const hasInstallationAccess = permissions?.contents === "write" || permissions?.contents === "admin";
-        
-        if (hasInstallationAccess) {
-          core.info(`App has write permissions via installation`);
-          return true;
-        }
-        
-        core.warning(`App lacks write permissions in both collaborator and installation`);
-        return false;
-      } catch (installationError) {
-        core.warning(`App lacks repository access: ${installationError}`);
-        return false;
-      }
+      const level = data.permission;
+      core.info(`Human collaborator permission level: ${level}`);
+      return level === "admin" || level === "write";
+    } catch (error) {
+      core.warning(`Unable to fetch collaborator level for ${actor}: ${error}`);
     }
+  }
 
-    const response = await octokit.repos.getCollaboratorPermissionLevel({
+  /* 2. For GitHub Apps / Bots — or when fallback above fails —
+   *    just ask the repository API what *this token* can do.
+   *    The `permissions` field will contain booleans for
+   *        { admin, maintain, push, triage, pull }.
+   *    `push` ~ write, `admin` ~ admin.
+   */
+  try {
+    const { data: repo } = await octokit.repos.get({
       owner: repository.owner,
       repo: repository.repo,
-      username: actor,
     });
 
-    const permissionLevel = response.data.permission;
-    core.info(`Permission level retrieved: ${permissionLevel}`);
+    const perms = repo.permissions || {};
+    const hasWrite = Boolean(perms.admin || perms.push || perms.maintain);
 
-    if (permissionLevel === "admin" || permissionLevel === "write") {
-      core.info(`Actor has write access: ${permissionLevel}`);
-      return true;
-    } else {
-      core.warning(`Actor has insufficient permissions: ${permissionLevel}`);
-      return false;
-    }
+    core.info(`Token repo permissions → admin:${perms.admin} push:${perms.push} maintain:${perms.maintain}`);
+    if (hasWrite) core.info("Token has write‑level access via repo.permissions");
+    else core.warning("Token lacks write‑level access via repo.permissions");
+
+    return hasWrite;
   } catch (error) {
-    core.error(`Failed to check permissions: ${error}`);
-    throw new Error(`Failed to check permissions for ${actor}: ${error}`);
+    core.error(`Failed to inspect repo permissions with current token: ${error}`);
+    return false;
   }
 }

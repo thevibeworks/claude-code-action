@@ -103,7 +103,7 @@ describe("checkWritePermissions", () => {
     expect(result).toBe(false);
   });
 
-  test("should grant write permissions to bots with write access via collaborator check", async () => {
+  test("should grant write permissions to bots with write access via repo permissions", async () => {
     const mockOctokit = {
       users: {
         getByUsername: async () => ({
@@ -111,35 +111,12 @@ describe("checkWritePermissions", () => {
         }),
       },
       repos: {
-        getCollaboratorPermissionLevel: async () => ({
-          data: { permission: "write" },
-        }),
-      },
-    } as any;
-
-    const context = createContext("claude-bot");
-    const result = await checkWritePermissions(mockOctokit, context);
-
-    expect(result).toBe(true);
-  });
-
-  test("should grant write permissions to bots with read collaborator but write installation", async () => {
-    const mockOctokit = {
-      users: {
-        getByUsername: async () => ({
-          data: { type: "Bot" },
-        }),
-      },
-      repos: {
-        getCollaboratorPermissionLevel: async () => ({
-          data: { permission: "read" },
-        }),
-      },
-      apps: {
-        getRepoInstallation: async () => ({
+        getCollaboratorPermissionLevel: async () => {
+          throw new Error("Not found");
+        },
+        get: async () => ({
           data: {
-            id: 123,
-            permissions: { contents: "write" },
+            permissions: { admin: false, push: true, maintain: false },
           },
         }),
       },
@@ -151,7 +128,7 @@ describe("checkWritePermissions", () => {
     expect(result).toBe(true);
   });
 
-  test("should deny write permissions to bots with read access via both collaborator and installation", async () => {
+  test("should grant write permissions to bots with admin access via repo permissions", async () => {
     const mockOctokit = {
       users: {
         getByUsername: async () => ({
@@ -159,15 +136,37 @@ describe("checkWritePermissions", () => {
         }),
       },
       repos: {
-        getCollaboratorPermissionLevel: async () => ({
-          data: { permission: "read" },
+        getCollaboratorPermissionLevel: async () => {
+          throw new Error("Not found");
+        },
+        get: async () => ({
+          data: {
+            permissions: { admin: true, push: false, maintain: false },
+          },
         }),
       },
-      apps: {
-        getRepoInstallation: async () => ({
+    } as any;
+
+    const context = createContext("claude-bot");
+    const result = await checkWritePermissions(mockOctokit, context);
+
+    expect(result).toBe(true);
+  });
+
+  test("should deny write permissions to bots with read access via repo permissions", async () => {
+    const mockOctokit = {
+      users: {
+        getByUsername: async () => ({
+          data: { type: "Bot" },
+        }),
+      },
+      repos: {
+        getCollaboratorPermissionLevel: async () => {
+          throw new Error("Not found");
+        },
+        get: async () => ({
           data: {
-            id: 123,
-            permissions: { contents: "read" },
+            permissions: { admin: false, push: false, maintain: false },
           },
         }),
       },
@@ -179,7 +178,7 @@ describe("checkWritePermissions", () => {
     expect(result).toBe(false);
   });
 
-  test("should fallback to app installation check for bots when collaborator check fails", async () => {
+  test("should grant write permissions to bots with maintain access via repo permissions", async () => {
     const mockOctokit = {
       users: {
         getByUsername: async () => ({
@@ -190,12 +189,9 @@ describe("checkWritePermissions", () => {
         getCollaboratorPermissionLevel: async () => {
           throw new Error("Not found");
         },
-      },
-      apps: {
-        getRepoInstallation: async () => ({
+        get: async () => ({
           data: {
-            id: 123,
-            permissions: { contents: "write" },
+            permissions: { admin: false, push: false, maintain: true },
           },
         }),
       },
@@ -207,7 +203,7 @@ describe("checkWritePermissions", () => {
     expect(result).toBe(true);
   });
 
-  test("should deny write permissions to bots with read-only installation", async () => {
+  test("should deny write permissions to bots with no repo permissions", async () => {
     const mockOctokit = {
       users: {
         getByUsername: async () => ({
@@ -218,12 +214,9 @@ describe("checkWritePermissions", () => {
         getCollaboratorPermissionLevel: async () => {
           throw new Error("Not found");
         },
-      },
-      apps: {
-        getRepoInstallation: async () => ({
+        get: async () => ({
           data: {
-            id: 123,
-            permissions: { contents: "read" },
+            permissions: { admin: false, push: false, maintain: false },
           },
         }),
       },
@@ -235,7 +228,7 @@ describe("checkWritePermissions", () => {
     expect(result).toBe(false);
   });
 
-  test("should deny write permissions to bots with no installation", async () => {
+  test("should deny write permissions to bots when repo.get fails", async () => {
     const mockOctokit = {
       users: {
         getByUsername: async () => ({
@@ -246,10 +239,8 @@ describe("checkWritePermissions", () => {
         getCollaboratorPermissionLevel: async () => {
           throw new Error("Not found");
         },
-      },
-      apps: {
-        getRepoInstallation: async () => {
-          throw new Error("Installation not found");
+        get: async () => {
+          throw new Error("Repository access denied");
         },
       },
     } as any;
@@ -271,14 +262,16 @@ describe("checkWritePermissions", () => {
         getCollaboratorPermissionLevel: async () => {
           throw new Error("API Error");
         },
+        get: async () => {
+          throw new Error("API Error");
+        },
       },
     } as any;
 
     const context = createContext("test-user");
+    const result = await checkWritePermissions(mockOctokit, context);
 
-    await expect(checkWritePermissions(mockOctokit, context)).rejects.toThrow(
-      "Failed to check permissions for test-user:",
-    );
+    expect(result).toBe(false);
   });
 
   test("should grant write permissions to users with admin access", async () => {
@@ -312,32 +305,9 @@ describe("checkWritePermissions", () => {
         getCollaboratorPermissionLevel: async () => ({
           data: { permission: "admin" },
         }),
-      },
-    } as any;
-
-    const context = createContext("admin-bot");
-    const result = await checkWritePermissions(mockOctokit, context);
-
-    expect(result).toBe(true);
-  });
-
-  test("should grant write permissions to bots with admin access via installation", async () => {
-    const mockOctokit = {
-      users: {
-        getByUsername: async () => ({
-          data: { type: "Bot" },
-        }),
-      },
-      repos: {
-        getCollaboratorPermissionLevel: async () => {
-          throw new Error("Not found");
-        },
-      },
-      apps: {
-        getRepoInstallation: async () => ({
+        get: async () => ({
           data: {
-            id: 123,
-            permissions: { contents: "admin" },
+            permissions: { admin: true, push: false, maintain: false },
           },
         }),
       },
@@ -349,27 +319,7 @@ describe("checkWritePermissions", () => {
     expect(result).toBe(true);
   });
 
-  test("should continue when getBotActorType fails", async () => {
-    const mockOctokit = {
-      users: {
-        getByUsername: async () => {
-          throw new Error("User not found");
-        },
-      },
-      repos: {
-        getCollaboratorPermissionLevel: async () => ({
-          data: { permission: "write" },
-        }),
-      },
-    } as any;
-
-    const context = createContext("unknown-user");
-    const result = await checkWritePermissions(mockOctokit, context);
-
-    expect(result).toBe(true);
-  });
-
-  test("should handle installation without permissions object", async () => {
+  test("should grant write permissions to bots with admin access via repo permissions", async () => {
     const mockOctokit = {
       users: {
         getByUsername: async () => ({
@@ -380,11 +330,58 @@ describe("checkWritePermissions", () => {
         getCollaboratorPermissionLevel: async () => {
           throw new Error("Not found");
         },
-      },
-      apps: {
-        getRepoInstallation: async () => ({
+        get: async () => ({
           data: {
-            id: 123,
+            permissions: { admin: true, push: false, maintain: false },
+          },
+        }),
+      },
+    } as any;
+
+    const context = createContext("admin-bot");
+    const result = await checkWritePermissions(mockOctokit, context);
+
+    expect(result).toBe(true);
+  });
+
+  test("should continue when getActorType fails", async () => {
+    const mockOctokit = {
+      users: {
+        getByUsername: async () => {
+          throw new Error("User not found");
+        },
+      },
+      repos: {
+        getCollaboratorPermissionLevel: async () => ({
+          data: { permission: "write" },
+        }),
+        get: async () => ({
+          data: {
+            permissions: { admin: false, push: true, maintain: false },
+          },
+        }),
+      },
+    } as any;
+
+    const context = createContext("unknown-user");
+    const result = await checkWritePermissions(mockOctokit, context);
+
+    expect(result).toBe(true);
+  });
+
+  test("should handle repo without permissions object", async () => {
+    const mockOctokit = {
+      users: {
+        getByUsername: async () => ({
+          data: { type: "Bot" },
+        }),
+      },
+      repos: {
+        getCollaboratorPermissionLevel: async () => {
+          throw new Error("Not found");
+        },
+        get: async () => ({
+          data: {
             // permissions is undefined
           },
         }),
