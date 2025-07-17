@@ -23,7 +23,10 @@ describe("checkHumanActor", () => {
     } as any;
   };
 
-  const createContext = (actor: string = "test-user"): ParsedGitHubContext => ({
+  const createContext = (
+    actor: string = "test-user",
+    allowBotActor: boolean = false,
+  ): ParsedGitHubContext => ({
     runId: "1234567890",
     eventName: "issue_comment",
     eventAction: "created",
@@ -61,6 +64,9 @@ describe("checkHumanActor", () => {
       directPrompt: "",
       branchPrefix: "claude/",
       useStickyComment: false,
+      additionalPermissions: new Map(),
+      useCommitSigning: false,
+      allowBotActor,
     },
   });
 
@@ -69,7 +75,7 @@ describe("checkHumanActor", () => {
     const context = createContext("human-user");
 
     await expect(
-      checkHumanActor(mockOctokit, context, false),
+      checkHumanActor(mockOctokit, context),
     ).resolves.toBeUndefined();
 
     expect(consoleSpy).toHaveBeenCalledWith("Actor type: User");
@@ -80,7 +86,7 @@ describe("checkHumanActor", () => {
     const mockOctokit = createMockOctokit("Bot");
     const context = createContext("bot-actor");
 
-    await expect(checkHumanActor(mockOctokit, context, false)).rejects.toThrow(
+    await expect(checkHumanActor(mockOctokit, context)).rejects.toThrow(
       "Workflow initiated by non-human actor: bot-actor (type: Bot).",
     );
 
@@ -89,10 +95,10 @@ describe("checkHumanActor", () => {
 
   test("should allow bot actors when allowBotActor is true", async () => {
     const mockOctokit = createMockOctokit("Bot");
-    const context = createContext("bot-actor");
+    const context = createContext("bot-actor", true);
 
     await expect(
-      checkHumanActor(mockOctokit, context, true),
+      checkHumanActor(mockOctokit, context),
     ).resolves.toBeUndefined();
 
     expect(consoleSpy).toHaveBeenCalledWith("Actor type: Bot");
@@ -113,7 +119,7 @@ describe("checkHumanActor", () => {
     } as any;
     const context = createContext("test-actor");
 
-    await checkHumanActor(mockOctokit, context, false);
+    await checkHumanActor(mockOctokit, context);
 
     expect(capturedUsername!).toBe("test-actor");
   });
@@ -129,7 +135,7 @@ describe("checkHumanActor", () => {
     } as any;
     const context = createContext("nonexistent-user");
 
-    await expect(checkHumanActor(mockOctokit, context, false)).rejects.toThrow(
+    await expect(checkHumanActor(mockOctokit, context)).rejects.toThrow(
       "User not found",
     );
   });

@@ -57,6 +57,9 @@ describe("checkWritePermissions", () => {
       directPrompt: "",
       branchPrefix: "claude/",
       useStickyComment: false,
+      additionalPermissions: new Map(),
+      useCommitSigning: false,
+      allowBotActor: false,
     },
   });
 
