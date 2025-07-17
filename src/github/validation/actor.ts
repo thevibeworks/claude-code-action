@@ -12,7 +12,10 @@ import type { ParsedGitHubContext } from "../context";
 /**
  * Get the GitHub actor type (User, Bot, Organization, etc.)
  */
-async function getActorType(octokit: Octokit, actor: string): Promise<string | null> {
+async function getActorType(
+  octokit: Octokit,
+  actor: string,
+): Promise<string | null> {
   try {
     const { data } = await octokit.users.getByUsername({ username: actor });
     return data.type;
@@ -27,9 +30,11 @@ export async function checkHumanActor(
   githubContext: ParsedGitHubContext,
 ) {
   const actorType = await getActorType(octokit, githubContext.actor);
-  
+
   if (!actorType) {
-    throw new Error(`Could not determine actor type for: ${githubContext.actor}`);
+    throw new Error(
+      `Could not determine actor type for: ${githubContext.actor}`,
+    );
   }
 
   console.log(`Actor type: ${actorType}`);

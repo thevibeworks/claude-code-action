@@ -103,7 +103,7 @@ describe("checkWritePermissions", () => {
     expect(result).toBe(false);
   });
 
-  test("should grant write permissions to bots with write access via repo permissions", async () => {
+  test("should grant write permissions to bots with write access via installation", async () => {
     const mockOctokit = {
       users: {
         getByUsername: async () => ({
@@ -116,8 +116,22 @@ describe("checkWritePermissions", () => {
         },
         get: async () => ({
           data: {
-            permissions: { admin: false, push: true, maintain: false },
+            default_branch: "main",
+            permissions: { admin: false, push: false, maintain: false },
           },
+        }),
+      },
+      apps: {
+        getRepoInstallation: async () => ({
+          data: {
+            id: 123,
+            permissions: { contents: "write" },
+          },
+        }),
+      },
+      git: {
+        getRef: async () => ({
+          data: { ref: "refs/heads/main" },
         }),
       },
     } as any;
@@ -128,7 +142,7 @@ describe("checkWritePermissions", () => {
     expect(result).toBe(true);
   });
 
-  test("should grant write permissions to bots with admin access via repo permissions", async () => {
+  test("should grant write permissions to bots with capability test", async () => {
     const mockOctokit = {
       users: {
         getByUsername: async () => ({
@@ -141,8 +155,19 @@ describe("checkWritePermissions", () => {
         },
         get: async () => ({
           data: {
-            permissions: { admin: true, push: false, maintain: false },
+            default_branch: "main",
+            permissions: { admin: false, push: false, maintain: false },
           },
+        }),
+      },
+      apps: {
+        getRepoInstallation: async () => {
+          throw new Error("Installation not found");
+        },
+      },
+      git: {
+        getRef: async () => ({
+          data: { ref: "refs/heads/main" },
         }),
       },
     } as any;
@@ -178,7 +203,7 @@ describe("checkWritePermissions", () => {
     expect(result).toBe(false);
   });
 
-  test("should grant write permissions to bots with maintain access via repo permissions", async () => {
+  test("should grant write permissions to bots with admin installation", async () => {
     const mockOctokit = {
       users: {
         getByUsername: async () => ({
@@ -191,8 +216,22 @@ describe("checkWritePermissions", () => {
         },
         get: async () => ({
           data: {
-            permissions: { admin: false, push: false, maintain: true },
+            default_branch: "main",
+            permissions: { admin: false, push: false, maintain: false },
           },
+        }),
+      },
+      apps: {
+        getRepoInstallation: async () => ({
+          data: {
+            id: 123,
+            permissions: { contents: "admin" },
+          },
+        }),
+      },
+      git: {
+        getRef: async () => ({
+          data: { ref: "refs/heads/main" },
         }),
       },
     } as any;
@@ -216,9 +255,20 @@ describe("checkWritePermissions", () => {
         },
         get: async () => ({
           data: {
+            default_branch: "main",
             permissions: { admin: false, push: false, maintain: false },
           },
         }),
+      },
+      apps: {
+        getRepoInstallation: async () => {
+          throw new Error("Installation not found");
+        },
+      },
+      git: {
+        getRef: async () => {
+          throw new Error("Access denied");
+        },
       },
     } as any;
 
@@ -241,6 +291,16 @@ describe("checkWritePermissions", () => {
         },
         get: async () => {
           throw new Error("Repository access denied");
+        },
+      },
+      apps: {
+        getRepoInstallation: async () => {
+          throw new Error("Installation not found");
+        },
+      },
+      git: {
+        getRef: async () => {
+          throw new Error("Access denied");
         },
       },
     } as any;
@@ -332,8 +392,19 @@ describe("checkWritePermissions", () => {
         },
         get: async () => ({
           data: {
+            default_branch: "main",
             permissions: { admin: true, push: false, maintain: false },
           },
+        }),
+      },
+      apps: {
+        getRepoInstallation: async () => {
+          throw new Error("Installation not found");
+        },
+      },
+      git: {
+        getRef: async () => ({
+          data: { ref: "refs/heads/main" },
         }),
       },
     } as any;
@@ -382,9 +453,20 @@ describe("checkWritePermissions", () => {
         },
         get: async () => ({
           data: {
+            default_branch: "main",
             // permissions is undefined
           },
         }),
+      },
+      apps: {
+        getRepoInstallation: async () => {
+          throw new Error("Installation not found");
+        },
+      },
+      git: {
+        getRef: async () => {
+          throw new Error("Access denied");
+        },
       },
     } as any;
 
