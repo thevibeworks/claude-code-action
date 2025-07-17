@@ -47,42 +47,41 @@ export async function checkWritePermissions(
         const permissionLevel = response.data.permission;
         core.info(`App permission level: ${permissionLevel}`);
 
-        if (permissionLevel === "admin" || permissionLevel === "write") {
+        const hasWriteAccess = permissionLevel === "admin" || permissionLevel === "write";
+        if (hasWriteAccess) {
           core.info(`App has write access: ${permissionLevel}`);
           return true;
-        } else {
-          core.warning(`App has insufficient permissions: ${permissionLevel}`);
-          return false;
         }
+        
+        core.warning(`App has insufficient permissions: ${permissionLevel}`);
+        return false;
       } catch (error) {
         core.warning(
           `Could not check collaborator permissions for bot, checking app installation: ${error}`,
         );
+      }
 
-        try {
-          const installation = await octokit.apps.getRepoInstallation({
-            owner: repository.owner,
-            repo: repository.repo,
-          });
+      try {
+        const installation = await octokit.apps.getRepoInstallation({
+          owner: repository.owner,
+          repo: repository.repo,
+        });
 
-          core.info(`App installation found: ${installation.data.id}`);
+        core.info(`App installation found: ${installation.data.id}`);
 
-          const permissions = installation.data.permissions;
-          if (
-            permissions &&
-            (permissions.contents === "write" ||
-              permissions.contents === "admin")
-          ) {
-            core.info(`App has write permissions via installation`);
-            return true;
-          } else {
-            core.warning(`App lacks write permissions in installation`);
-            return false;
-          }
-        } catch (installationError) {
-          core.warning(`App lacks repository access: ${installationError}`);
-          return false;
+        const permissions = installation.data.permissions;
+        const hasWriteAccess = permissions?.contents === "write" || permissions?.contents === "admin";
+        
+        if (hasWriteAccess) {
+          core.info(`App has write permissions via installation`);
+          return true;
         }
+        
+        core.warning(`App lacks write permissions in installation`);
+        return false;
+      } catch (installationError) {
+        core.warning(`App lacks repository access: ${installationError}`);
+        return false;
       }
     }
 
