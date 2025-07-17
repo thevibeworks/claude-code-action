@@ -174,6 +174,7 @@ jobs:
 | `max_turns`               | Maximum number of conversation turns Claude can take (limits back-and-forth exchanges)                               | No       | -         |
 | `timeout_minutes`         | Timeout in minutes for execution                                                                                     | No       | `30`      |
 | `use_sticky_comment`      | Use just one comment to deliver PR comments (only applies for pull_request event workflows)                          | No       | `false`   |
+| `allow_bot_actor`         | Allow GitHub bots and automation accounts to trigger Claude (security: defaults to false, requires explicit opt-in) | No       | `false`   |
 | `github_token`            | GitHub token for Claude to operate with. **Only include this if you're connecting a custom GitHub app of your own!** | No       | -         |
 | `model`                   | Model to use (provider-specific format required for Bedrock/Vertex)                                                  | No       | -         |
 | `fallback_model`          | Enable automatic fallback to specified model when primary model is unavailable                                       | No       | -         |
@@ -732,7 +733,7 @@ Both AWS Bedrock and GCP Vertex AI require OIDC authentication.
 ### Access Control
 
 - **Repository Access**: The action can only be triggered by users with write access to the repository
-- **No Bot Triggers**: GitHub Apps and bots cannot trigger this action
+- **Bot Actor Control**: GitHub Apps and bots are blocked by default for security. Use `allow_bot_actor: true` to enable automated workflows (requires explicit opt-in)
 - **Token Permissions**: The GitHub app receives only a short-lived token scoped specifically to the repository it's operating in
 - **No Cross-Repository Access**: Each action invocation is limited to the repository where it was triggered
 - **Limited Scope**: The token cannot access other repositories or perform actions beyond the configured permissions
