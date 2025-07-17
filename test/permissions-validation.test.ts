@@ -123,7 +123,7 @@ describe("checkWritePermissions", () => {
     expect(result).toBe(true);
   });
 
-  test("should deny write permissions to bots with read access via collaborator check", async () => {
+  test("should grant write permissions to bots with read collaborator but write installation", async () => {
     const mockOctokit = {
       users: {
         getByUsername: async () => ({
@@ -133,6 +133,42 @@ describe("checkWritePermissions", () => {
       repos: {
         getCollaboratorPermissionLevel: async () => ({
           data: { permission: "read" },
+        }),
+      },
+      apps: {
+        getRepoInstallation: async () => ({
+          data: {
+            id: 123,
+            permissions: { contents: "write" },
+          },
+        }),
+      },
+    } as any;
+
+    const context = createContext("claude-bot");
+    const result = await checkWritePermissions(mockOctokit, context);
+
+    expect(result).toBe(true);
+  });
+
+  test("should deny write permissions to bots with read access via both collaborator and installation", async () => {
+    const mockOctokit = {
+      users: {
+        getByUsername: async () => ({
+          data: { type: "Bot" },
+        }),
+      },
+      repos: {
+        getCollaboratorPermissionLevel: async () => ({
+          data: { permission: "read" },
+        }),
+      },
+      apps: {
+        getRepoInstallation: async () => ({
+          data: {
+            id: 123,
+            permissions: { contents: "read" },
+          },
         }),
       },
     } as any;

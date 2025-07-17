@@ -37,6 +37,7 @@ export async function checkWritePermissions(
     if (actorType === "Bot") {
       core.info(`GitHub App detected: ${actor}, checking write permissions`);
 
+      let hasCollaboratorAccess = false;
       try {
         const response = await octokit.repos.getCollaboratorPermissionLevel({
           owner: repository.owner,
@@ -45,20 +46,15 @@ export async function checkWritePermissions(
         });
 
         const permissionLevel = response.data.permission;
-        core.info(`App permission level: ${permissionLevel}`);
+        core.info(`App collaborator permission level: ${permissionLevel}`);
 
-        const hasWriteAccess = permissionLevel === "admin" || permissionLevel === "write";
-        if (hasWriteAccess) {
-          core.info(`App has write access: ${permissionLevel}`);
+        hasCollaboratorAccess = permissionLevel === "admin" || permissionLevel === "write";
+        if (hasCollaboratorAccess) {
+          core.info(`App has write access via collaborator: ${permissionLevel}`);
           return true;
         }
-        
-        core.warning(`App has insufficient permissions: ${permissionLevel}`);
-        return false;
       } catch (error) {
-        core.warning(
-          `Could not check collaborator permissions for bot, checking app installation: ${error}`,
-        );
+        core.warning(`Could not check collaborator permissions for bot: ${error}`);
       }
 
       try {
@@ -70,14 +66,14 @@ export async function checkWritePermissions(
         core.info(`App installation found: ${installation.data.id}`);
 
         const permissions = installation.data.permissions;
-        const hasWriteAccess = permissions?.contents === "write" || permissions?.contents === "admin";
+        const hasInstallationAccess = permissions?.contents === "write" || permissions?.contents === "admin";
         
-        if (hasWriteAccess) {
+        if (hasInstallationAccess) {
           core.info(`App has write permissions via installation`);
           return true;
         }
         
-        core.warning(`App lacks write permissions in installation`);
+        core.warning(`App lacks write permissions in both collaborator and installation`);
         return false;
       } catch (installationError) {
         core.warning(`App lacks repository access: ${installationError}`);
