@@ -44,13 +44,19 @@ jobs:
           github_token: ${{ steps.app-token.outputs.token }}  # Use App token, not GITHUB_TOKEN
           allow_bot_actor: true  # Enable bot actors to trigger Claude
           
-          # Option 1: direct_prompt - Adds priority instructions to standard prompt
-          # direct_prompt: |
-          #   Focus on security implications and performance impacts.
-          #   Be extra thorough with database migrations.
-          #   Always suggest tests for new features.
+          # Option 1: custom_instructions - Adds personality/rules while keeping standard GitHub context
+          # custom_instructions: |
+          #   You're a friendly but thorough code reviewer.
+          #   Always check for edge cases and suggest tests.
+          #   Be encouraging to new contributors.
           
-          # Option 2: override_prompt - Completely replaces the standard prompt
+          # Option 2: direct_prompt - High-priority override instructions
+          # direct_prompt: |
+          #   ONLY review security issues. Ignore style/formatting.
+          #   Do NOT implement any code changes.
+          #   Focus on SQL injection and XSS vulnerabilities.
+          
+          # Option 3: override_prompt - Completely replaces the standard prompt (loses GitHub context)
           # override_prompt: |
           #   You are a specialized code reviewer for our API.
           #   Review the PR focusing only on:
