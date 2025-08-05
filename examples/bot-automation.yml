@@ -1,0 +1,60 @@
+name: Bot Automation with Claude
+
+on:
+  pull_request:
+    types: [opened, reopened]
+  issue_comment:
+    types: [created]
+
+jobs:
+  claude-bot-review:
+    # Allow bots to trigger this workflow
+    if: |
+      github.event_name == 'pull_request' ||
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude'))
+    
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      id-token: write
+
+    steps:
+      # Step 1: Generate GitHub App token (required for bot actors)
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+          permission-issues: write
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+
+      - name: Run Claude with Bot Actor
+        uses: anthropics/claude-code-action@main
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ steps.app-token.outputs.token }}  # Use App token, not GITHUB_TOKEN
+          allow_bot_actor: true  # Enable bot actors to trigger Claude
+          
+          # Option 1: direct_prompt - Adds priority instructions to standard prompt
+          # direct_prompt: |
+          #   Focus on security implications and performance impacts.
+          #   Be extra thorough with database migrations.
+          #   Always suggest tests for new features.
+          
+          # Option 2: override_prompt - Completely replaces the standard prompt
+          # override_prompt: |
+          #   You are a specialized code reviewer for our API.
+          #   Review the PR focusing only on:
+          #   - API contract changes
+          #   - Breaking changes
+          #   - Performance implications
+          #   {{prDiff}}  # Variables are substituted
