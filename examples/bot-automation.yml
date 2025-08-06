@@ -1,0 +1,66 @@
+name: Bot Automation with Claude
+
+on:
+  pull_request:
+    types: [opened, reopened]
+  issue_comment:
+    types: [created]
+
+jobs:
+  claude-bot-review:
+    # Allow bots to trigger this workflow
+    if: |
+      github.event_name == 'pull_request' ||
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude'))
+    
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      id-token: write
+
+    steps:
+      # Step 1: Generate GitHub App token (required for bot actors)
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+          permission-issues: write
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+
+      - name: Run Claude with Bot Actor
+        uses: anthropics/claude-code-action@main
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ steps.app-token.outputs.token }}  # Use App token, not GITHUB_TOKEN
+          allow_bot_actor: true  # Enable bot actors to trigger Claude
+          
+          # Option 1: custom_instructions - Adds personality/rules while keeping standard GitHub context
+          # custom_instructions: |
+          #   You're a friendly but thorough code reviewer.
+          #   Always check for edge cases and suggest tests.
+          #   Be encouraging to new contributors.
+          
+          # Option 2: direct_prompt - High-priority override instructions
+          # direct_prompt: |
+          #   ONLY review security issues. Ignore style/formatting.
+          #   Do NOT implement any code changes.
+          #   Focus on SQL injection and XSS vulnerabilities.
+          
+          # Option 3: override_prompt - Completely replaces the standard prompt (loses GitHub context)
+          # override_prompt: |
+          #   You are a specialized code reviewer for our API.
+          #   Review the PR focusing only on:
+          #   - API contract changes
+          #   - Breaking changes
+          #   - Performance implications
+          #   {{prDiff}}  # Variables are substituted
